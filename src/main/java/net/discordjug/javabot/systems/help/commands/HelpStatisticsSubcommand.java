@@ -5,14 +5,8 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.PriorityQueue;
 
 import javax.imageio.ImageIO;
 
@@ -24,6 +18,8 @@ import net.discordjug.javabot.util.Pair;
 import net.discordjug.javabot.util.Plotter;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.interactions.commands.OptionMapping;
+import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.SubcommandData;
 import net.dv8tion.jda.api.utils.FileUpload;
 import xyz.dynxsty.dih4jda.interactions.commands.application.SlashCommand;
@@ -34,21 +30,30 @@ import xyz.dynxsty.dih4jda.interactions.commands.application.SlashCommand;
 public class HelpStatisticsSubcommand extends SlashCommand.Subcommand {
 
 	private static final List<Pair<String, Color>> COLORS = List.of(
-			new Pair<>("Red", Color.RED), new Pair<>("Blue", Color.BLUE), new Pair<>("Yellow", Color.YELLOW),
-			new Pair<>("Green", Color.GREEN), new Pair<>("Cyan", Color.CYAN), new Pair<>("Magenta", Color.MAGENTA),
-			new Pair<>("Orange", Color.ORANGE), new Pair<>("Pink", Color.PINK), new Pair<>("Light gray", Color.LIGHT_GRAY)
+			new Pair<>("Red", Color.decode("#D62728")), new Pair<>("Blue", Color.decode("#1F77B4")), new Pair<>("Yellow", Color.decode("#BCBD22")),
+			new Pair<>("Green", Color.decode("#2CA02C")), new Pair<>("Cyan", Color.decode("#17BECF")), new Pair<>("Magenta", Color.decode("#9467BD")),
+			new Pair<>("Orange", Color.decode("#FF7F0E")), new Pair<>("Pink", Color.decode("#E377C2")), new Pair<>("Light gray", Color.decode("#7F7F7F"))
 			);
 
 	private final HelpTransactionRepository transactionRepository;
-	
+
+	/**
+	 * Creates the help statistics subcommand.
+	 *
+	 * @param transactionRepository repository for help transactions
+	 */
 	public HelpStatisticsSubcommand(HelpTransactionRepository transactionRepository) {
 		this.transactionRepository = transactionRepository;
-		setCommandData(new SubcommandData("stats", "Shows an general plot about help activity in this server"));
+		setCommandData(new SubcommandData("stats", "Shows an general plot about help activity in this server")
+				.addOption(OptionType.BOOLEAN, "darkmode", "generate a plot in dark mode.", false)
+		);
+
 	}
 	
 	@Override
 	public void execute(SlashCommandInteractionEvent event) {
-		
+		boolean darkMode = event.getOption("darkmode", false, OptionMapping::getAsBoolean);
+
 		event.deferReply().queue();
 		
 		List<Pair<MonthInYear,HelpAccount>> transactionWeights = transactionRepository.getTotalTransactionWeightByMonthAndUsers(LocalDate.now().withDayOfMonth(1).minusYears(1).atStartOfDay());
@@ -75,8 +80,8 @@ public class HelpStatisticsSubcommand extends SlashCommand.Subcommand {
 			}
 			plotData.add(new Pair<>(position.getMonth() + " " + position.getYear(), new Plotter.Bar(entriesForThisMonth)));
 		}
-		
-		BufferedImage plot = new Plotter(plotData, "General helper statistics").plot();
+
+		BufferedImage plot = new Plotter(plotData, "Help Statistics","Monthly assistance provided to community members",darkMode).plot();
 		try(ByteArrayOutputStream os = new ByteArrayOutputStream()){
 			ImageIO.write(plot, "png", os);
 			FileUpload upload = FileUpload.fromData(os.toByteArray(), "image.png");
